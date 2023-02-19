@@ -41,8 +41,8 @@ This function will select n random pixels from the center/upper line of the scre
 def get_random_central_pixels(n: int, w: int, h: int) -> list:
   ps = []
   for _ in range(n):
-    x = random.randint(0, w)
-    y = random.randint(0, h)
+    x = random.randint(0, w-1)
+    y = random.randint(0, h-1)
 
     ps.append((x, y))
 
@@ -88,7 +88,7 @@ def ss_check_callback():
     obs.obs_frontend_recording_stop()
     return
   
-  if not obs.obs_frontend_recording_active():
+  if (not isStatic and not isEndBlue) and not obs.obs_frontend_recording_active():
     requests.post(ntfy_server, data="VHS Recording Starting up again")
     print("notify recording start, start recording")
     obs.obs_frontend_recording_start()
