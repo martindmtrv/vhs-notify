@@ -3,6 +3,7 @@ import os
 import random
 from PIL import Image
 import requests
+import time
 
 # ------
 delay = 10
@@ -25,6 +26,9 @@ def extract_screenshot():
   obs.obs_frontend_take_screenshot()
   fp = obs.obs_frontend_get_last_screenshot()
 
+  # blocking until the screenshot is created meh
+  while not os.path.exists(fp):
+    time.sleep(1)
 
   # open the ss and store FULLY in memory
   img = Image.open(fp)
@@ -39,14 +43,14 @@ def extract_screenshot():
 This function will select n random pixels from the center/upper line of the screen and return them
 """
 def get_random_central_pixels(n: int, w: int, h: int) -> list:
-  pixels = []
+  ps = []
   for _ in range(n):
     x = random.randint(w)
     y = random.randint(h)
 
-    pixels.append((x, y))
+    ps.append((x, y))
 
-  return pixels
+  return ps
 
 def is_blueish(p: tuple) -> bool:
   # approx check for blue
@@ -59,7 +63,6 @@ def is_static(p: tuple) -> bool:
 # Called at script unload
 def script_unload():
   print("Unloading")
-  # restore_sceneitem_after_shake()
 
 # Called to set default values of data settings
 def script_defaults(settings):
@@ -90,18 +93,18 @@ is_active = False
 def ss_check_callback():
   ss = extract_screenshot()
 
-  pixels = get_random_central_pixels(pixels, ss.size[0], ss.size[1])
+  ps = get_random_central_pixels(pixels, ss.size[0], ss.size[1])
   isEndBlue = True
   isStatic = True
   
   # check if all pixels are blueish -> signalling end of tape
-  for p in pixels:
+  for p in ps:
     if not is_blueish(ss.getpixel(p)):
       isEndBlue = False
       break
 
   # check if all static
-  for p in pixels:
+  for p in ps:
     if not is_static(ss.getpixel(p)):
       isStatic = False
       break
@@ -127,12 +130,16 @@ def ss_check_callback():
 # Callback for the hotkey
 def on_auto_record_hotkey(pressed):
   global is_active
-  is_active = pressed
 
-  if is_active:
-    timer_add(delay * 1000, ss_check_callback)
-  else:
-    timer_remove(ss_check_callback)
+  if pressed:
+    is_active = not is_active
+    print("VHS Auto recording: ", is_active)
+    
+    if is_active:
+      timer_add(ss_check_callback, delay * 1000)
+      obs.handler
+    else:
+      timer_remove(ss_check_callback)
 
 # Identifier of the hotkey set by OBS
 hotkey_id = obs.OBS_INVALID_HOTKEY_ID
