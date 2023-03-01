@@ -3,11 +3,16 @@ import os
 import random
 from PIL import Image
 import requests
+import math
 
 # ------
 delay = 10
 ntfy_server = ""
 pixels = 10
+approx_R = 15
+approx_G = 25
+approx_B = 200
+alpha = 5
 # ------
 
 
@@ -33,6 +38,7 @@ def extract_screenshot():
   # delete it from fs
   os.remove(fp)
 
+
   return img
 
 """
@@ -50,7 +56,7 @@ def get_random_central_pixels(n: int, w: int, h: int) -> list:
 
 def is_blueish(p: tuple) -> bool:
   # approx check for blue
-  return p[0] <= 10 and p[2] >= 135 and p[2] <= 145 and p[1] < 5
+  return math.isclose(p[0], approx_R, abs_tol=alpha) and math.isclose(p[1], approx_G, abs_tol=alpha) and math.isclose(p[2], approx_B, abs_tol=alpha)
 
 def is_static(p: tuple) -> bool:
   # approx check for static 
@@ -103,6 +109,10 @@ def script_defaults(settings):
   obs.obs_data_set_default_int(settings, "delay", 10)
   obs.obs_data_set_default_int(settings, "pixels", 10)
   obs.obs_data_set_default_string(settings, "ntfy_server", "")
+  obs.obs_data_set_default_int(settings, "approx_R", 20)
+  obs.obs_data_set_default_int(settings, "approx_G", 30)
+  obs.obs_data_set_default_int(settings, "approx_B", 200)
+  obs.obs_data_set_default_int(settings, "alpha", 5)
 
 # Called to display the properties GUI
 def script_properties():
@@ -111,17 +121,24 @@ def script_properties():
   obs.obs_properties_add_int_slider(props, "delay", "Refresh Rate (s)", 1, 30, 1)
   obs.obs_properties_add_int_slider(props, "pixels", "Number of Pixels to Check (higher is less false positives)", 5, 100, 5)
   obs.obs_properties_add_text(props, "ntfy_server", "Ntfy Server Topic URL (optional for notifications)", obs.OBS_TEXT_DEFAULT)
+  obs.obs_properties_add_int(props, "approx_R", "Approximate Red value on Blue Screen", 0, 255, 1)
+  obs.obs_properties_add_int(props, "approx_G", "Approximate Green value on Blue Screen", 0, 255, 1)
+  obs.obs_properties_add_int(props, "approx_B", "Approximate Blue value on Blue Screen", 0, 255, 1)
+  obs.obs_properties_add_int(props, "alpha", "Tolerance for Color Match (for example 5, will match approx_B +- 5 as being blue)", 0, 50, 1)
 
   return props
 
 # Called after change of settings including once after script load
 def script_update(settings):
-  global delay, ntfy_server, pixels
+  global delay, ntfy_server, pixels, approx_R, approx_G, approx_B, alpha
   ntfy_server = obs.obs_data_get_string(settings, "ntfy_server")
   pixels = obs.obs_data_get_int(settings, "pixels")
   delay = obs.obs_data_get_int(settings, "delay")
+  approx_R = obs.obs_data_get_int(settings, "approx_R")
+  approx_G = obs.obs_data_get_int(settings, "approx_G")
+  approx_B = obs.obs_data_get_int(settings, "approx_B")
+  alpha = obs.obs_data_get_int(settings, "alpha")
 
-# Global animation activity flag
 is_active = False
 
 def trigger_screenshot():
